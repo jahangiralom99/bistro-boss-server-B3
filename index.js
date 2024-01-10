@@ -39,6 +39,22 @@ async function run() {
     })
 
 
+    // Middleware
+    const verifyToken = async (req, res, next) => {
+      console.log(req.headers);
+      if (!req.headers.authorization) {
+        return res.status(401).send({message: 'Unauthorized'});
+      };
+      const token = req.headers.authorization.split(' ')[1];
+      jwt.verify(token, process.env.SE_TOKEN, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({message: 'Unauthorized'});
+        };
+        req.decoded = decoded;
+      })
+
+    }
+    
     // users create data Post
     app.post("/api/v1/users", async (req, res) => {
       const user = req.body;
