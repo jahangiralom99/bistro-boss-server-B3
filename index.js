@@ -72,6 +72,21 @@ async function run() {
     app.get("/api/v1/users", verifyToken, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
+    });
+
+    // get admin check:
+    app.get("/api/v1/users/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+       return res.status(403).send({message: "forbidden access"})
+      };
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === 'Admin';
+      }
+      res.send({admin})
     })
 
     // update users Admin
