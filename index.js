@@ -52,7 +52,19 @@ async function run() {
         req.decoded = decoded;
         next();
       })
+    }
 
+    // verify admin
+    const verifyAdmin = async (req, res, next) => {
+      // console.log(req.decoded);
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const isAdmin = user.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({message : "forbidden access"})
+      }
+      next();
     }
     
     // users create data Post
@@ -69,7 +81,7 @@ async function run() {
     });
 
     // get User data.
-    app.get("/api/v1/users", verifyToken, async (req, res) => {
+    app.get("/api/v1/users",verifyToken, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
