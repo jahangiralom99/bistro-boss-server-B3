@@ -41,7 +41,6 @@ async function run() {
 
     // Middleware
     const verifyToken = async (req, res, next) => {
-      console.log(req.headers);
       if (!req.headers.authorization) {
         return res.status(401).send({message: 'Unauthorized'});
       };
@@ -51,6 +50,7 @@ async function run() {
           return res.status(401).send({message: 'Unauthorized'});
         };
         req.decoded = decoded;
+        next();
       })
 
     }
@@ -69,7 +69,7 @@ async function run() {
     });
 
     // get User data.
-    app.get("/api/v1/users", async (req, res) => {
+    app.get("/api/v1/users", verifyToken, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     })
