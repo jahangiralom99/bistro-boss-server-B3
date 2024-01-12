@@ -102,7 +102,7 @@ async function run() {
     })
 
     // update users Admin
-    app.patch("/api/v1/users/admin/:id", async (req, res) => {
+    app.patch("/api/v1/users/admin/:id",verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const upDate = {
@@ -116,7 +116,7 @@ async function run() {
     })
 
     // delete users collection
-    app.delete("/api/v1/users/:id", async (req, res) => {
+    app.delete("/api/v1/users/:id",verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await usersCollection.deleteOne(filter);
