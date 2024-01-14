@@ -135,8 +135,24 @@ async function run() {
       const result = await menuCollection.insertOne(myMenu);
       res.send(result);
 
+    });
+
+    // get By id
+    app.get('/api/v1/menu/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const query = { _id: (id) };
+      const result = await menuCollection.findOne(query);
+      res.send(result);
     })
 
+    // delete menu
+    app.delete("/api/v1/delete/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: (id) };
+      const result = await menuCollection.deleteOne(query);
+      res.send(result);
+    })
 
     // get review data
     app.get("/api/v1/review", async (req, res) => {
