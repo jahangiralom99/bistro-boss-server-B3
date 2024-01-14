@@ -144,6 +144,24 @@ async function run() {
       const query = { _id: (id) };
       const result = await menuCollection.findOne(query);
       res.send(result);
+    });
+
+    // update menu;
+    app.patch("/api/v1/menu/:id", async (req, res) => {
+      const id = req.params.id;
+      const Item = req.body;
+      const filter = { _id: id };
+      const updateItem = {
+        $set: {
+          name: Item.name,
+          recipe: Item.recipe,
+          category: Item.category,
+          price: Item.price,
+          image: Item.image
+        }
+      };
+      const result = await menuCollection.updateOne(filter, updateItem);
+      res.send(result);
     })
 
     // delete menu
