@@ -60,7 +60,7 @@ async function run() {
       const email = req.decoded.email;
       const query = { email: email };
       const user = await usersCollection.findOne(query);
-      const isAdmin = user.role === "admin";
+      const isAdmin = user.role === "Admin";
       if (!isAdmin) {
         return res.status(403).send({message : "forbidden access"})
       }
@@ -81,13 +81,13 @@ async function run() {
     });
 
     // get User data.
-    app.get("/api/v1/users",verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/api/v1/users",verifyToken,  async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
     // get admin check:
-    app.get("/api/v1/users/admin/:email", verifyToken, async (req, res) => {
+    app.get("/api/v1/users/admin/:email", verifyToken, verifyAdmin, async (req, res) => {
       const email = req.params.email;
       if (email !== req.decoded.email) {
        return res.status(403).send({message: "forbidden access"})
@@ -102,7 +102,7 @@ async function run() {
     })
 
     // update users Admin
-    app.patch("/api/v1/users/admin/:id",verifyToken, verifyAdmin, async (req, res) => {
+    app.patch("/api/v1/users/admin/:id",verifyToken,verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const upDate = {
@@ -128,6 +128,15 @@ async function run() {
       const cursor = await menuCollection.find().toArray();
       res.send(cursor);
     });
+
+    // menu post data
+    app.post("/api/v1/menu",verifyToken, verifyAdmin, async (req, res) => {
+      const myMenu = req.body;
+      const result = await menuCollection.insertOne(myMenu);
+      res.send(result);
+
+    })
+
 
     // get review data
     app.get("/api/v1/review", async (req, res) => {
