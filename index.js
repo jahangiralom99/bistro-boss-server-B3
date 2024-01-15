@@ -224,6 +224,21 @@ async function run() {
       })
     })
 
+    // payment details create :.de
+    app.post("/api/v1/payments", async (req, res) => {
+      const payment = req.body;
+      // console.log(payment);
+      const paymentResult = await paymentsCollection.insertOne(payment);
+      // deleted payment all 
+      const query = {
+        _id: {
+          $in: payment.cardIds.map(id => new ObjectId(id))
+        }
+      };
+
+      const deletedResult = await cartCollection.deleteMany(query);
+      res.send({ paymentResult, deletedResult });
+    })
 
 
 
