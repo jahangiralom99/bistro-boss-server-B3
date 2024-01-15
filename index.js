@@ -5,6 +5,7 @@ const cors = require("cors");
 var jwt = require('jsonwebtoken');
 require("dotenv").config();
 const port = process.env.PORT || 3000;
+const stripe = require("stripe")(process.env.PAYMENT_KEY);
 
 // middleware
 app.use(cors());
@@ -29,6 +30,7 @@ async function run() {
     const reviewsCollection = client.db("bostroDB").collection("reviews");
     const cartCollection = client.db("bostroDB").collection("carts");
     const usersCollection = client.db("bostroDB").collection("users");
+    const paymentsCollection = client.db("bostroDB").collection("payments");
 
 
     // JWT related APT Create.
@@ -204,6 +206,26 @@ async function run() {
       const result = await cartCollection.deleteOne(query);
       res.send(result);
     });
+
+
+    // Payment methods
+    app.post("/api/v1/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ["card"]
+      });
+
+      res.send({
+        clientSecret : paymentIntent.client_secret,
+      })
+    })
+
+
+
 
     await client.db("admin").command({ ping: 1 });
     console.log(
