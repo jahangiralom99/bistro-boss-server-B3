@@ -30,7 +30,7 @@ async function run() {
     const reviewsCollection = client.db("bostroDB").collection("reviews");
     const cartCollection = client.db("bostroDB").collection("carts");
     const usersCollection = client.db("bostroDB").collection("users");
-    const paymentsCollection = client.db("bostroDB").collection("payments");
+    const paymentsCollection = client.db("bostroDB").collection("orders");
 
     // JWT related APT Create.
     app.post("/api/v1/create-jwt", async (req, res) => {
@@ -233,7 +233,7 @@ async function run() {
     });
 
     // payment details create :.de
-    app.post("/api/v1/payments", async (req, res) => {
+    app.post("/api/v1/orders", async (req, res) => {
       const payment = req.body;
       // console.log(payment);
       const paymentResult = await paymentsCollection.insertOne(payment);
@@ -249,7 +249,7 @@ async function run() {
     });
 
     // get Payment :
-    app.get("/api/v1/payments/:email", verifyToken, async (req, res) => {
+    app.get("/api/v1/orders/:email", verifyToken, async (req, res) => {
       const query = { email: req.params.email };
       // console.log(query);
       if (req.params.email !== req.decoded.email) {
@@ -259,7 +259,36 @@ async function run() {
       res.send(result);
     });
 
+    // stats or analytics 
+    app.get("/api/v1/admin-status", verifyToken, verifyAdmin, async (req, res) => {
+      const users = await usersCollection.estimatedDocumentCount();
+      const menuItems = await menuCollection.estimatedDocumentCount();
+      const orders = await paymentsCollection.estimatedDocumentCount();
 
+      // this is not best way
+      // const payments = await paymentsCollection.find().toArray();
+      // const revenue = payments.reduce((total, payment) => total + payment.price, 0);
+
+      const result = await paymentsCollection.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalRevenue: {
+              $sum: "$price"
+            }
+          }
+        }
+      ]).toArray();
+
+      const revenue = result.length > 0 ? result[0].totalRevenue : 0
+
+      res.send({
+        users, 
+        menuItems,
+        orders,
+        revenue
+      })
+    })
     
 
     await client.db("admin").command({ ping: 1 });
