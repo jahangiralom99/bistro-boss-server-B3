@@ -30,7 +30,7 @@ async function run() {
     const reviewsCollection = client.db("bostroDB").collection("reviews");
     const cartCollection = client.db("bostroDB").collection("carts");
     const usersCollection = client.db("bostroDB").collection("users");
-    const paymentsCollection = client.db("bostroDB").collection("orders");
+    const paymentsCollection = client.db("bostroDB").collection("payments");
 
     // JWT related APT Create.
     app.post("/api/v1/create-jwt", async (req, res) => {
@@ -288,6 +288,45 @@ async function run() {
         orders,
         revenue
       })
+    });
+
+
+    // using aggregate Pipeline:
+    app.get("/api/v1/order-status", async (req, res) => {
+      const result = await paymentsCollection.aggregate([
+        {
+          $unwind : "$menuItemIds"
+        },
+        {
+          $lookup: {
+            from: "menu",
+            localField: "menuItemIds",
+            foreignField: "_id",
+            as : "menuItem"
+          }  
+        },
+        {
+          $unwind :"$menuItem" 
+        },
+        {
+          $group: {
+            _id: "$menuItem.category",
+            quantity: { $sum: 1 },
+            revenue : { $sum: "$menuItem.price"}
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            category: "$_id",
+            quantity: "$quantity",
+            revenue : "$revenue"
+          }
+        }
+      ]).toArray();
+
+
+      res.send(result);
     })
     
 
