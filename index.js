@@ -6,12 +6,12 @@ var jwt = require("jsonwebtoken");
 require("dotenv").config();
 const port = process.env.PORT || 3000;
 const stripe = require("stripe")(process.env.PAYMENT_KEY);
-const formData = require('form-data');
-const Mailgun = require('mailgun.js');
+const formData = require("form-data");
+const Mailgun = require("mailgun.js");
 const mailgun = new Mailgun(formData);
 const mg = mailgun.client({
-	username: 'api',
-	key: '<PRIVATE_API_KEY>',
+  username: "api",
+  key: process.env.MAIL_GUN_KEY,
 });
 
 // middleware
@@ -224,8 +224,6 @@ async function run() {
       res.send(result);
     });
 
-
-
     // Payment methods
     app.post("/api/v1/create-payment-intent", async (req, res) => {
       const { price } = req.body;
@@ -254,7 +252,16 @@ async function run() {
         },
       };
 
-      // send payment email notification 
+      // send payment email notification
+      mg.messages
+        .create(sandbox0a35231ddc594ae68f50a8fd56c00370.mailgun.org, {
+          from: "Mailgun Sandbox <postmaster@sandbox0a35231ddc594ae68f50a8fd56c00370.mailgun.org>",
+          to: ["jahangiralomtuf99@gmail.com"],
+          subject: "Bistro Boss Order Confirmations",
+          text: "Testing some Mailgun awesomness!",
+        })
+        .then((msg) => console.log(msg)) // logs response data
+        .catch((err) => console.log(err)); // logs any error`;
 
       const deletedResult = await cartCollection.deleteMany(query);
       res.send({ paymentResult, deletedResult });
@@ -271,76 +278,87 @@ async function run() {
       res.send(result);
     });
 
-    // stats or analytics 
-    app.get("/api/v1/admin-status", verifyToken, verifyAdmin, async (req, res) => {
-      const users = await usersCollection.estimatedDocumentCount();
-      const menuItems = await menuCollection.estimatedDocumentCount();
-      const orders = await paymentsCollection.estimatedDocumentCount();
+    // stats or analytics
+    app.get(
+      "/api/v1/admin-status",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const users = await usersCollection.estimatedDocumentCount();
+        const menuItems = await menuCollection.estimatedDocumentCount();
+        const orders = await paymentsCollection.estimatedDocumentCount();
 
-      // this is not best way
-      // const payments = await paymentsCollection.find().toArray();
-      // const revenue = payments.reduce((total, payment) => total + payment.price, 0);
+        // this is not best way
+        // const payments = await paymentsCollection.find().toArray();
+        // const revenue = payments.reduce((total, payment) => total + payment.price, 0);
 
-      const result = await paymentsCollection.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalRevenue: {
-              $sum: "$price"
-            }
-          }
-        }
-      ]).toArray();
+        const result = await paymentsCollection
+          .aggregate([
+            {
+              $group: {
+                _id: null,
+                totalRevenue: {
+                  $sum: "$price",
+                },
+              },
+            },
+          ])
+          .toArray();
 
-      const revenue = result.length > 0 ? result[0].totalRevenue : 0
+        const revenue = result.length > 0 ? result[0].totalRevenue : 0;
 
-      res.send({
-        users, 
-        menuItems,
-        orders,
-        revenue
-      })
-    });
-
+        res.send({
+          users,
+          menuItems,
+          orders,
+          revenue,
+        });
+      }
+    );
 
     // using aggregate Pipeline:
-    app.get("/api/v1/order-status", verifyToken, verifyAdmin, async (req, res) => {
-      const result = await paymentsCollection.aggregate([
-        {
-          $unwind : "$menuItemIds"
-        },
-        {
-          $lookup: {
-            from: "menu",
-            localField: "menuItemIds",
-            foreignField: "_id",
-            as : "menuItem"
-          }  
-        },
-        {
-          $unwind :"$menuItem" 
-        },
-        {
-          $group: {
-            _id: "$menuItem.category",
-            quantity: { $sum: 1 },
-            revenue : { $sum: "$menuItem.price"}
-          }
-        },
-        {
-          $project: {
-            _id: 0,
-            category: "$_id",
-            quantity: "$quantity",
-            revenue : "$revenue"
-          }
-        }
-      ]).toArray();
+    app.get(
+      "/api/v1/order-status",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const result = await paymentsCollection
+          .aggregate([
+            {
+              $unwind: "$menuItemIds",
+            },
+            {
+              $lookup: {
+                from: "menu",
+                localField: "menuItemIds",
+                foreignField: "_id",
+                as: "menuItem",
+              },
+            },
+            {
+              $unwind: "$menuItem",
+            },
+            {
+              $group: {
+                _id: "$menuItem.category",
+                quantity: { $sum: 1 },
+                revenue: { $sum: "$menuItem.price" },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                category: "$_id",
+                quantity: "$quantity",
+                revenue: "$revenue",
+              },
+            },
+          ])
+          .toArray();
 
-
-      res.send(result);
-    })
-    
+        res.send(result);
+      }
+    );
 
     await client.db("admin").command({ ping: 1 });
     console.log(
