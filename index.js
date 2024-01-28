@@ -6,6 +6,13 @@ var jwt = require("jsonwebtoken");
 require("dotenv").config();
 const port = process.env.PORT || 3000;
 const stripe = require("stripe")(process.env.PAYMENT_KEY);
+const formData = require('form-data');
+const Mailgun = require('mailgun.js');
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({
+	username: 'api',
+	key: '<PRIVATE_API_KEY>',
+});
 
 // middleware
 app.use(cors());
@@ -25,7 +32,8 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
+
     const menuCollection = client.db("bostroDB").collection("menu");
     const reviewsCollection = client.db("bostroDB").collection("reviews");
     const cartCollection = client.db("bostroDB").collection("carts");
@@ -216,6 +224,8 @@ async function run() {
       res.send(result);
     });
 
+
+
     // Payment methods
     app.post("/api/v1/create-payment-intent", async (req, res) => {
       const { price } = req.body;
@@ -243,6 +253,8 @@ async function run() {
           $in: payment.cardIds.map((id) => new ObjectId(id)),
         },
       };
+
+      // send payment email notification 
 
       const deletedResult = await cartCollection.deleteMany(query);
       res.send({ paymentResult, deletedResult });
@@ -292,7 +304,7 @@ async function run() {
 
 
     // using aggregate Pipeline:
-    app.get("/api/v1/order-status", async (req, res) => {
+    app.get("/api/v1/order-status", verifyToken, verifyAdmin, async (req, res) => {
       const result = await paymentsCollection.aggregate([
         {
           $unwind : "$menuItemIds"
